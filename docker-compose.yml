@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: redpanda_broker
+    command: ["redpanda", "start", "--smp", "1", "--memory", "1G"]
+    ports:
+      - "19092:19092"
+      - "9092:9092"
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+
+  postgres_fraud:
+    image: postgres:15-alpine
+    container_name: postgres_fraud
+    environment:
+      POSTGRES_USER: fraud_admin
+      POSTGRES_PASSWORD: fraud_password
+      POSTGRES_DB: fraud_ledger
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase_bi
+    ports:
+      - "3000:3000"
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=fraud_ledger
+      - MB_DB_PORT=5432
+      - MB_DB_USER=fraud_admin
+      - MB_DB_PASS=fraud_password
+      - MB_DB_HOST=postgres_fraud
+    depends_on:
+      - postgres_fraud
+
+  fraud_api:
+    build: .
+    container_name: fraud_api
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - KAFKA_BROKER=redpanda:9092
+      - DB_HOST=postgres_fraud
+    depends_on:
+      - redpanda
+      - redis
+      - postgres_fraud
