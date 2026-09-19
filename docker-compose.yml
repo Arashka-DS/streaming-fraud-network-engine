@@ -2,45 +2,44 @@ version: '3.8'
 
 services:
   redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:latest
-    container_name: redpanda_broker
-    command: ["redpanda", "start", "--smp", "1", "--memory", "1G"]
+    image: vectorized/redpanda:v23.3.11
+    container_name: fraud_redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --kafka-addr INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092
+      - --advertise-kafka-addr INTERNAL://redpanda:9092,EXTERNAL://localhost:19092
     ports:
       - "19092:19092"
-      - "9092:9092"
+      - "9644:9644"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
 
-  redis:
+  redis_velocity:
     image: redis:7-alpine
-    container_name: redis_cache
+    container_name: fraud_redis
     ports:
       - "6379:6379"
 
   postgres_fraud:
     image: postgres:15-alpine
-    container_name: postgres_fraud
+    container_name: fraud_db
     environment:
       POSTGRES_USER: fraud_admin
       POSTGRES_PASSWORD: fraud_password
-      POSTGRES_DB: fraud_ledger
+      POSTGRES_DB: fraud_warehouse
     ports:
       - "5432:5432"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-
-  metabase:
-    image: metabase/metabase:latest
-    container_name: metabase_bi
-    ports:
-      - "3000:3000"
-    environment:
-      - MB_DB_TYPE=postgres
-      - MB_DB_DBNAME=fraud_ledger
-      - MB_DB_PORT=5432
-      - MB_DB_USER=fraud_admin
-      - MB_DB_PASS=fraud_password
-      - MB_DB_HOST=postgres_fraud
-    depends_on:
-      - postgres_fraud
+      - pg_fraud_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud_admin -d fraud_warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   fraud_api:
     build: .
@@ -48,10 +47,78 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - REDIS_HOST=redis
       - KAFKA_BROKER=redpanda:9092
       - DB_HOST=postgres_fraud
+      - DB_USER=fraud_admin
+      - DB_PASSWORD=fraud_password
+      - DB_NAME=fraud_warehouse
+      - REDIS_HOST=redis_velocity
+    volumes:
+      - ./src:/app/src
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
-      - redpanda
-      - redis
-      - postgres_fraud
+      postgres_fraud:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      redis_velocity:
+        condition: service_started
+
+  fraud_consumer:
+    build: .
+    container_name: fraud_consumer
+    environment:
+      - KAFKA_BROKER=redpanda:9092
+      - DB_HOST=postgres_fraud
+      - DB_USER=fraud_admin
+      - DB_PASSWORD=fraud_password
+      - DB_NAME=fraud_warehouse
+      - REDIS_HOST=redis_velocity
+    volumes:
+      - ./src:/app/src
+    command: python src/fraud_engine.py
+    depends_on:
+      postgres_fraud:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      redis_velocity:
+        condition: service_started
+
+  fraud_ui:
+    build: .
+    container_name: fraud_ui
+    ports:
+      - "8501:8501"
+    environment:
+      - DB_HOST=postgres_fraud
+      - DB_USER=fraud_admin
+      - DB_PASSWORD=fraud_password
+      - DB_NAME=fraud_warehouse
+    volumes:
+      - ./frontend:/app/frontend
+      - ./src:/app/src
+    command: streamlit run frontend/app.py --server.address 0.0.0.0
+    depends_on:
+      postgres_fraud:
+        condition: service_healthy
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: fraud_metabase
+    ports:
+      - "3000:3000"
+    environment:
+      - MB_DB_TYPE=postgres
+      - MB_DB_DBNAME=fraud_warehouse
+      - MB_DB_PORT=5432
+      - MB_DB_USER=fraud_admin
+      - MB_DB_PASS=fraud_password
+      - MB_DB_HOST=postgres_fraud
+    depends_on:
+      postgres_fraud:
+        condition: service_healthy
+
+volumes:
+  redpanda_data:
+  pg_fraud_data:
