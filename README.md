@@ -1,21 +1,31 @@
 # Streaming Network Fraud & Mule Detection Engine
 
-An enterprise-grade anti-money laundering (AML) and fraud detection platform. This pipeline processes streaming transactions to identify synthetic behaviors, localized anomalies, and organized mule rings using a multi-layered detection architecture.
+An enterprise-grade, event-driven anti-money laundering (AML) platform designed to detect synthetic transaction injection, localized velocity spikes, and organized mule accounts in real time.
 
-## Detection Taxonomy
-1. **Row-Level ML:** `IsolationForest` detects statistical outliers based on transaction size and rolling velocity.
-2. **Graph Heuristics:** Tracks directed money flows using `NetworkX` to deterministically flag Mule Hubs (high in/out degree with balanced volume).
-3. **Macro Community Detection:** Applies the **Louvain Method** to segment the transaction graph into localized fraud rings.
-4. **Audit Level:** Continuously audits global transaction distributions against **Benford's Law** $P(d) = \log_{10}\left(1 + \frac{1}{d}\right)$ to identify synthetic/bot-generated fiat volumes.
+## 🏛️ Detection Taxonomy
+1. **Row-Level ML (Isolation Forest):** Evaluates incoming transaction volumes and rolling transaction frequency to score statistical anomalies.
+2. **In-Memory Velocity Tracking (Redis):** Tracks sliding-window account velocity ($t-60\text{s}$) using Redis `ZSET` aggregations for sub-millisecond lookups.
+3. **Graph Topology & Mule Hub Detection (NetworkX):** Evaluates directed money flows to identify accounts with high in/out degree parity operating as high-throughput pass-through conduits.
+4. **Macro Community Detection (Louvain Method):** Dynamically partitions the global transaction graph into modularity-optimized clusters to isolate coordinated fraud rings.
+5. **Macro Audit (Benford's Law):** Evaluates empirical leading-digit distributions against $P(d) = \log_{10}(1 + 1/d)$ via Kolmogorov-Smirnov statistical divergence tests to detect automated wash-trading scripts.
 
-## Architecture Stack
-- **Streaming Ingestion:** Redpanda (Kafka-compatible).
-- **Feature Store:** Redis (Sub-millisecond sliding window `ZSET` velocity aggregations).
-- **Inference & Graph:** Python, Scikit-Learn, NetworkX, python-louvain.
-- **Persistence & BI:** PostgreSQL for immutable audit logging, Metabase for executive reporting.
+## ⚙️ Architectural Stack
+* **Event Ingestion:** Redpanda (Kafka-compatible event broker)
+* **Real-Time State:** Redis (In-memory sorted sets for sliding window counts)
+* **Storage & Audit:** PostgreSQL (Immutable compliance ledger)
+* **Analysis & ML:** Python, Scikit-Learn, NetworkX, python-louvain, Scipy
+* **Dashboards:** Streamlit (SOC UI with interactive PyVis network graphs) & Metabase (Operational BI)
 
-## Running the Engine
-1. Spin up the cluster: `docker-compose up -d --build`
-2. Start the synthetic transaction producer: `python src/producer.py`
-3. Access the Benford's Law Audit endpoint at `http://localhost:8000/metrics/benford`.
-4. Open Metabase at `http://localhost:3000` to visualize the PostgreSQL `transaction_audit` ledger.
+## 🚀 Quick Start
+1. **Boot the complete infrastructure:**
+   ```bash
+   docker-compose up -d --build
+   ```
+2. **Launch the synthetic fraud & mule generator:**
+   ```bash
+   python src/producer.py
+   ```
+3. **Access the Interfaces:**
+   * **Streamlit SOC Dashboard:** `http://localhost:8501` (Interactive PyVis graph, Benford curve, live alerts)
+   * **FastAPI Docs & Metrics:** `http://localhost:8000/docs`
+   * **Metabase BI:** `http://localhost:3000` (Pre-configured for `fraud_warehouse`)
