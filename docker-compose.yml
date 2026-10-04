@@ -124,9 +124,10 @@ services:
       - MB_DB_PASS=mb_password
       - MB_DB_HOST=metabase_db
     depends_on:
+      metabase_db:
+        condition: service_started
       postgres_fraud:
         condition: service_healthy
-      metabase_db
 
 volumes:
   redpanda_data:
