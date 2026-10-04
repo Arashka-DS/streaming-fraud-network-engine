@@ -45,6 +45,7 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - PYTHONUNBUFFERED=1
       - KAFKA_BROKER=redpanda:9092
       - DB_HOST=postgres_fraud
       - DB_USER=fraud_admin
@@ -67,6 +68,7 @@ services:
     container_name: fraud_consumer
     restart: on-failure
     environment:
+      - PYTHONUNBUFFERED=1
       - KAFKA_BROKER=redpanda:9092
       - DB_HOST=postgres_fraud
       - DB_USER=fraud_admin
