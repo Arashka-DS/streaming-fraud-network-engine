@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS transaction_audit (
     sender VARCHAR(50),
     receiver VARCHAR(50),
     amount NUMERIC,
+    velocity_score INTEGER,
     is_anomaly BOOLEAN,
     is_mule BOOLEAN,
     louvain_community_id INTEGER,
