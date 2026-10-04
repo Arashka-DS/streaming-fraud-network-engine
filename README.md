@@ -23,7 +23,7 @@ An enterprise-grade, event-driven anti-money laundering (AML) platform designed 
    ```
 2. **Launch the synthetic fraud & mule generator:**
    ```bash
-   python src/producer.py
+   docker exec -it fraud_api python src/producer.py
    ```
 3. **Access the Interfaces:**
    * **Streamlit SOC Dashboard:** `http://localhost:8501` (Interactive PyVis graph, Benford curve, live alerts)
