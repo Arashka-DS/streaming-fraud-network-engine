@@ -63,29 +63,6 @@ services:
       redis_velocity:
         condition: service_started
 
-  fraud_consumer:
-    build: .
-    container_name: fraud_consumer
-    restart: on-failure
-    environment:
-      - PYTHONUNBUFFERED=1
-      - KAFKA_BROKER=redpanda:9092
-      - DB_HOST=postgres_fraud
-      - DB_USER=fraud_admin
-      - DB_PASSWORD=fraud_password
-      - DB_NAME=fraud_warehouse
-      - REDIS_HOST=redis_velocity
-    volumes:
-      - ./src:/app/src
-    command: python src/fraud_engine.py
-    depends_on:
-      postgres_fraud:
-        condition: service_healthy
-      redpanda:
-        condition: service_started
-      redis_velocity:
-        condition: service_started
-
   fraud_ui:
     build: .
     container_name: fraud_ui
