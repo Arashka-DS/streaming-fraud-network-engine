@@ -65,6 +65,7 @@ services:
   fraud_consumer:
     build: .
     container_name: fraud_consumer
+    restart: on-failure
     environment:
       - KAFKA_BROKER=redpanda:9092
       - DB_HOST=postgres_fraud
