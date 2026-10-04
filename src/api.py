@@ -53,7 +53,7 @@ def consume_transactions():
         auto_offset_reset='latest'
     )
     
-   for message in consumer:
+    for message in consumer:
         tx = message.value
         sender = tx['source_account']
         receiver = tx['destination_account']
