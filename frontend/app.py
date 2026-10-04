@@ -41,7 +41,11 @@ with tab1:
     try:
         conn = get_db_connection()
         query = f"""
-            SELECT source_account, destination_account, amount, is_mule_candidate, is_anomaly
+            SELECT sender AS source_account, 
+                   receiver AS destination_account, 
+                   amount, 
+                   is_mule AS is_mule_candidate, 
+                   is_anomaly
             FROM transaction_audit
             WHERE amount >= {min_amount}
             ORDER BY timestamp DESC
@@ -159,10 +163,16 @@ with tab3:
     try:
         conn = get_db_connection()
         alerts_df = pd.read_sql("""
-            SELECT transaction_id, source_account, destination_account, amount, 
-                   velocity_score, is_anomaly, is_mule_candidate, timestamp
+            SELECT tx_id AS transaction_id, 
+                   sender AS source_account, 
+                   receiver AS destination_account, 
+                   amount, 
+                   velocity_score,
+                   is_anomaly, 
+                   is_mule AS is_mule_candidate, 
+                   timestamp
             FROM transaction_audit
-            WHERE is_anomaly = TRUE OR is_mule_candidate = TRUE
+            WHERE is_anomaly = TRUE OR is_mule = TRUE
             ORDER BY timestamp DESC
             LIMIT 50;
         """, conn)
