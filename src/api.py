@@ -29,7 +29,9 @@ def log_to_postgres(tx_id, sender, receiver, amount, is_anomaly, is_mule, commun
     try:
         conn = psycopg2.connect(
             host=os.getenv("DB_HOST", "localhost"),
-            database="fraud_ledger", user="fraud_admin", password="fraud_password"
+            database=os.getenv("DB_NAME", "fraud_warehouse"), # Fixed DB Name
+            user=os.getenv("DB_USER", "fraud_admin"), 
+            password=os.getenv("DB_PASSWORD", "fraud_password")
         )
         cursor = conn.cursor()
         cursor.execute("""
@@ -40,8 +42,16 @@ def log_to_postgres(tx_id, sender, receiver, amount, is_anomaly, is_mule, commun
         cursor.close()
         conn.close()
     except Exception as e:
-        print(f"DB Error: {e}")
+        print(f"DB Error: {e}", flush=True)
 
+def consume_transactions():
+    consumer = KafkaConsumer(
+        'transactions',
+        bootstrap_servers=os.getenv("KAFKA_BROKER", "localhost:19092"),
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+        auto_offset_reset='latest'
+    )
+    
 def consume_transactions():
     consumer = KafkaConsumer(
         'transactions',
@@ -52,7 +62,11 @@ def consume_transactions():
     
     for message in consumer:
         tx = message.value
-        sender, receiver, amount, tx_id = tx['sender'], tx['receiver'], tx['amount'], tx['tx_id']
+        # Fixed keys to match producer.py schema
+        sender = tx['source_account']
+        receiver = tx['destination_account']
+        amount = tx['amount']
+        tx_id = tx['transaction_id']
         
         # Fast Redis Velocity Check
         redis_key = f"velocity:{sender}"
