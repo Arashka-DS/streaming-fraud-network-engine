@@ -87,7 +87,7 @@ services:
     build: .
     container_name: fraud_ui
     ports:
-      - "8501:8501"
+      - "8511:8511"
     environment:
       - DB_HOST=postgres_fraud
       - DB_USER=fraud_admin
