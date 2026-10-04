@@ -28,4 +28,4 @@ An enterprise-grade, event-driven anti-money laundering (AML) platform designed 
 3. **Access the Interfaces:**
    * **Streamlit SOC Dashboard:** `http://localhost:9501` (Interactive PyVis graph, Benford curve, live alerts)
    * **FastAPI Docs & Metrics:** `http://localhost:8000/docs`
-   * **Metabase BI:** `http://localhost:3000` (Pre-configured for `fraud_warehouse`)
+   * **Metabase BI:** `http://localhost:3000`
