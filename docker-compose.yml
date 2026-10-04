@@ -126,8 +126,7 @@ services:
     depends_on:
       postgres_fraud:
         condition: service_healthy
-      metabase_db:
-        condition: service_healthy
+      metabase_db
 
 volumes:
   redpanda_data:
