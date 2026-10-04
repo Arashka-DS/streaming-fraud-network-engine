@@ -124,7 +124,7 @@ services:
       - MB_DB_PASS=mb_password
       - MB_DB_HOST=metabase_db
     depends_on:
-      - metabase_db
+      metabase_db:
       postgres_fraud:
         condition: service_healthy
 
