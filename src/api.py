@@ -60,9 +60,8 @@ def consume_transactions():
         auto_offset_reset='latest'
     )
     
-    for message in consumer:
+   for message in consumer:
         tx = message.value
-        # Fixed keys to match producer.py schema
         sender = tx['source_account']
         receiver = tx['destination_account']
         amount = tx['amount']
@@ -78,13 +77,17 @@ def consume_transactions():
         # Fast ML & Heuristics Check
         flags = fraud_engine.process_transaction(sender, receiver, amount, velocity_count)
         
+        # Cast NumPy booleans to native Python booleans for psycopg2
+        is_anomaly = bool(flags['is_anomaly'])
+        is_mule = bool(flags['is_mule'])
+        
         # O(1) Lookup against cached graph communities
         community_id = cached_communities.get(sender, -1)
 
         # Asynchronous DB Write
         threading.Thread(
             target=log_to_postgres, 
-            args=(tx_id, sender, receiver, amount, flags['is_anomaly'], flags['is_mule'], community_id)
+            args=(tx_id, sender, receiver, amount, is_anomaly, is_mule, community_id)
         ).start()
 
 @app.on_event("startup")
