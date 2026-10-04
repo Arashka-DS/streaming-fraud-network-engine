@@ -44,14 +44,6 @@ def log_to_postgres(tx_id, sender, receiver, amount, velocity_score, is_anomaly,
         conn.close()
     except Exception as e:
         print(f"DB Error: {e}", flush=True)
-
-def consume_transactions():
-    consumer = KafkaConsumer(
-        'transactions',
-        bootstrap_servers=os.getenv("KAFKA_BROKER", "localhost:19092"),
-        value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-        auto_offset_reset='latest'
-    )
     
 def consume_transactions():
     consumer = KafkaConsumer(
