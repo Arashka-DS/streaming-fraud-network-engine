@@ -25,19 +25,20 @@ def update_graph_metrics():
             cached_communities = fraud_engine.compute_louvain_communities()
             print("[System] Louvain communities updated.")
 
-def log_to_postgres(tx_id, sender, receiver, amount, is_anomaly, is_mule, community_id):
+def log_to_postgres(tx_id, sender, receiver, amount, velocity_score, is_anomaly, is_mule, community_id):
     try:
         conn = psycopg2.connect(
             host=os.getenv("DB_HOST", "localhost"),
-            database=os.getenv("DB_NAME", "fraud_warehouse"), # Fixed DB Name
+            database=os.getenv("DB_NAME", "fraud_warehouse"),
             user=os.getenv("DB_USER", "fraud_admin"), 
             password=os.getenv("DB_PASSWORD", "fraud_password")
         )
         cursor = conn.cursor()
+        # Add velocity_score to the INSERT statement
         cursor.execute("""
-            INSERT INTO transaction_audit (tx_id, sender, receiver, amount, is_anomaly, is_mule, louvain_community_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (tx_id, sender, receiver, amount, is_anomaly, is_mule, community_id))
+            INSERT INTO transaction_audit (tx_id, sender, receiver, amount, velocity_score, is_anomaly, is_mule, louvain_community_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (tx_id, sender, receiver, amount, velocity_score, is_anomaly, is_mule, community_id))
         conn.commit()
         cursor.close()
         conn.close()
@@ -87,7 +88,7 @@ def consume_transactions():
         # Asynchronous DB Write
         threading.Thread(
             target=log_to_postgres, 
-            args=(tx_id, sender, receiver, amount, is_anomaly, is_mule, community_id)
+            args=(tx_id, sender, receiver, amount, velocity_count, is_anomaly, is_mule, community_id)
         ).start()
 
 @app.on_event("startup")
